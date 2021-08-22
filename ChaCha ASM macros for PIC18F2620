@@ -1,0 +1,208 @@
+;HERE YOU'LL FIND SOME MACROS YOU CAN USE TO MAKE YOUR OWN ChaCha IMPLEMENTATION FOR THE PIC18F2620
+;I'VE INCLUDED MACROS FOR THE QUARTER-ROUNDS, AND THE DOUBLE-ROUND
+;COPY-PASTE ANYTHING YOU WANT AND HAVE FUN!
+
+;IMPORTANT NOTICE: ALL THE INSTRUCTIONS PERFORMED ON THE "W_x" AND ChaCha_GPRx" REGISTERS IN THESE MACROS HAVE THE "a" BIT SET TO "1", 
+;WHICH MEANS THE BSR IS USED, AND NOT THE ACCESS BANK!
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;SOME OF THE GENERAL PURPOSE REGISTERS USED FOR THE ChaCha MACRO;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+W_0 EQU 0X340 ;HERE YOU CAN ENTER YOUR DESIRED STARTING ADDRESS FOR THE 64-BYTE ChaCha ARRAY; MAKE SURE THE ENTIRE 64-BYTE ARRAY IS IN THE SAME BANK! 
+W_1 EQU (W_0 + 4)
+W_2 EQU (W_1 + 4)
+W_3 EQU (W_2 + 4)
+W_4 EQU (W_3 + 4)
+W_5 EQU (W_4 + 4)
+W_6 EQU (W_5 + 4)
+W_7 EQU (W_6 + 4)
+W_8 EQU (W_7 + 4)
+W_9 EQU (W_8 + 4)
+W_10 EQU (W_9 + 4)
+W_11 EQU (W_10 + 4)
+W_12 EQU (W_11 + 4)
+W_13 EQU (W_12 + 4)
+W_14 EQU (W_13 + 4)
+W_15 EQU (W_14 + 4)
+ChaCha_GPR0 EQU (W_15 + 4)
+ChaCha_GPR1 EQU (ChaCha_GPR0 + 4)
+ChaCha_GPR2 EQU (ChaCha_GPR1 + 4)
+ChaCha_GPR3 EQU (ChaCha_GPR2 + 4)
+ChaCha_GPR4 EQU (ChaCha_GPR3 + 4)
+    
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;ChaCha QUARTER ROUND MACRO;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ChaCha_QR MACRO W_A, W_B, W_C, W_D
+    ;A=A+B
+    MOVF W_B, W, 1
+    ADDWF W_A, F, 1
+    MOVF (W_B + 1), W, 1
+    ADDWFC (W_A + 1), F, 1
+    MOVF (W_B + 2), W, 1
+    ADDWFC (W_A + 2), F, 1
+    MOVF (W_B + 3), W, 1
+    ADDWFC (W_A + 3), F, 1
+    ;D=D XOR A
+    MOVF W_A, W, 1
+    XORWF W_D, F, 1
+    MOVF (W_A + 1), W, 1
+    XORWF (W_D + 1), F, 1
+    MOVF (W_A + 2), W, 1
+    XORWF (W_D + 2), F, 1
+    MOVF (W_A + 3), W, 1
+    XORWF (W_D + 3), F, 1
+    ;D=D<<16
+    MOVF (W_D + 3), W, 1
+    MOVWF ChaCha_GPR1, 1
+    MOVF (W_D + 2), W, 1
+    MOVWF ChaCha_GPR2, 1
+    MOVF (W_D + 1), W, 1
+    MOVWF (W_D + 3), 1
+    MOVF W_D, W, 1
+    MOVWF (W_D + 2), 1
+    MOVF ChaCha_GPR1, W, 1
+    MOVWF (W_D + 1), 1
+    MOVF ChaCha_GPR2, W, 1
+    MOVWF W_D, 1
+    ;C=C + D
+    MOVF W_D, W, 1
+    ADDWF W_C, F, 1
+    MOVF (W_D + 1), W, 1
+    ADDWFC (W_C + 1), F, 1
+    MOVF (W_D + 2), W, 1
+    ADDWFC (W_C + 2), F, 1
+    MOVF (W_D + 3), W, 1
+    ADDWFC (W_C + 3), F, 1
+    ;B=B XOR C
+    MOVF W_C, W, 1
+    XORWF W_B, F, 1 
+    MOVF (W_C + 1), W, 1
+    XORWF (W_B + 1), F, 1
+    MOVF (W_C + 2), W, 1
+    XORWF (W_B + 2), F, 1
+    MOVF (W_C + 3), W, 1
+    XORWF (W_B + 3), F, 1
+    ;B=B<<12
+    MOVF (W_B + 3), W, 1
+    MOVWF ChaCha_GPR1, 1
+    MOVF (W_B + 2), W, 1
+    MOVWF (W_B + 3), 1
+    MOVF (W_B + 1), W, 1
+    MOVWF (W_B + 2), 1
+    MOVF W_B, W, 1
+    MOVWF (W_B + 1), 1
+    MOVF ChaCha_GPR1, W, 1
+    MOVWF W_B, 1
+    SWAPF (W_B + 3) , W, 1
+    MOVWF ChaCha_GPR0, 1
+    ANDLW 0XF0
+    MOVWF (W_B + 3), 1
+    SWAPF W_B, W, 1
+    MOVWF ChaCha_GPR1, 1
+    ANDLW 0XF0
+    MOVWF W_B, 1
+    MOVF ChaCha_GPR0, W, 1
+    ANDLW 0X0F
+    IORWF W_B, F, 1
+    SWAPF (W_B + 1), 0, 1
+    MOVWF ChaCha_GPR0, 1
+    ANDLW 0XF0
+    MOVWF (W_B + 1), 1
+    MOVF ChaCha_GPR1, W, 1
+    ANDLW 0X0F
+    IORWF (W_B + 1), F, 1
+    SWAPF (W_B + 2), W, 1
+    MOVWF ChaCha_GPR1, 1
+    ANDLW 0XF0
+    MOVWF (W_B + 2), 1
+    MOVF ChaCha_GPR0, W, 1
+    ANDLW 0X0F
+    IORWF (W_B + 2), F, 1
+    MOVF ChaCha_GPR1, W, 1
+    ANDLW 0X0F
+    IORWF (W_B + 3), F, 1
+    ;A=A+B
+    MOVF W_B, W, 1
+    ADDWF W_A, F, 1
+    MOVF (W_B + 1), W, 1
+    ADDWFC (W_A + 1), F, 1
+    MOVF (W_B + 2), W, 1
+    ADDWFC (W_A + 2), F, 1
+    MOVF (W_B + 3), W, 1
+    ADDWFC (W_A + 3),F, 1
+    ;D=D XOR A
+    MOVF W_A, W, 1
+    XORWF W_D, F, 1
+    MOVF (W_A + 1), W, 1
+    XORWF (W_D + 1), F, 1
+    MOVF (W_A + 2), W, 1
+    XORWF (W_D + 2), F, 1
+    MOVF (W_A + 3), W, 1
+    XORWF (W_D + 3), F, 1
+    ;D=D<<8
+    MOVF (W_D + 3), W, 1
+    MOVWF ChaCha_GPR1, 1
+    MOVF (W_D + 2), W, 1
+    MOVWF (W_D + 3), 1
+    MOVF (W_D + 1), W, 1
+    MOVWF (W_D + 2), 1
+    MOVF W_D, W, 1
+    MOVWF (W_D + 1), 1
+    MOVF ChaCha_GPR1, W, 1
+    MOVWF W_D, 1
+    ;C=C+D
+    MOVF W_D, W, 1
+    ADDWF W_C, F, 1
+    MOVF (W_D + 1), W, 1
+    ADDWFC (W_C + 1), F, 1
+    MOVF (W_D + 2), W, 1
+    ADDWFC (W_C + 2), F, 1
+    MOVF (W_D + 3), W, 1
+    ADDWFC (W_C + 3), F, 1
+    ;B=B XOR C
+    MOVF W_C, W, 1
+    XORWF W_B, F, 1
+    MOVF (W_C + 1), W, 1
+    XORWF (W_B + 1), F, 1
+    MOVF (W_C + 2), W, 1
+    XORWF (W_B + 2), F, 1
+    MOVF (W_C + 3), W, 1
+    XORWF (W_B + 3), F, 1
+    ;B=B<<7
+    MOVF (W_B + 3), W, 1
+    MOVWF ChaCha_GPR1, 1
+    MOVF (W_B + 2), W, 1
+    MOVWF (W_B + 3), 1
+    MOVF (W_B + 1), W, 1
+    MOVWF (W_B + 2), 1
+    MOVF W_B, W, 1
+    MOVWF (W_B + 1), 1
+    MOVF ChaCha_GPR1, W, 1
+    MOVWF W_B, 1
+    RRCF (W_B + 3), F, 1
+    RRCF (W_B + 2), F, 1
+    RRCF (W_B + 1), F, 1
+    RRCF W_B, F, 1
+    BCF (W_B + 3), 7, 1
+    MOVF STATUS, 0
+    ANDLW 0X01
+    RRNCF WREG
+    IORWF (W_B + 3), F, 1
+    ENDM
+    
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;ChaCha DOUBLE ROUND MACRO;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ChaCha_DOUBLE_ROUND MACRO
+    ;VERTICAL QR
+    ChaCha_QR W_0, W_4, W_8, W_12
+    ChaCha_QR W_1, W_5, W_9, W_13
+    ChaCha_QR W_2, W_6, W_10, W_14
+    ChaCha_QR W_3, W_7, W_11, W_15
+    ;DIAGONAL QR
+    ChaCha_QR W_0, W_5, W_10, W_15
+    ChaCha_QR W_1, W_6, W_11, W_12
+    ChaCha_QR W_2, W_7, W_8, W_13
+    ChaCha_QR W_3, W_4, W_9, W_14
+    ENDM  
